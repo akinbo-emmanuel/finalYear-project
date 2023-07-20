@@ -13,6 +13,8 @@
       integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
       crossorigin="anonymous"
     />
+
+    <link rel="css/style.css" href="style.css">
   </head>
 
   <body>
@@ -26,23 +28,47 @@
 
     <div class="container">
       <h4 class="mb-3">File Upload & Encrypt - AES256</h4>
-      <form>
+      <form> 
         <div class="mb-3">
           <label for="file" class="form-label">Select a file:</label>
           <input
             type="file"
             class="form-control"
-            id="fileUpload-AES"
+            id="file"
             name="file"
             required
           />
           <br />
 
-          <button type="submit" class="btn btn-danger" onclick="encryptFileAES()">
+          <button type="submit" class="btn btn-danger" id="send">
             Encrypt & Upload
           </button>
         </div>
       </form>
+
+      <table class="table caption-top mb-5">
+        <caption>Uploaded Encrypted Files (AES256)</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">File Name</th>
+            <th scope="col">File Size</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody1">
+          <!-- <tr>
+            <th scope="row">1</th>
+            <td>Mark</td>
+            <td>15kb</td>
+            <td>
+              <button type="submit" class="btn btn-outline-danger">
+                Decrypt
+              </button>
+            </td>
+          </tr> -->
+        </tbody>
+      </table>
     </div>
 
     <div class="container">
@@ -64,6 +90,30 @@
           </button>
         </div>
       </form>
+
+      <table class="table caption-top mb-5">
+        <caption>Uploaded Encrypted Files (Blowfish)</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">File Name</th>
+            <th scope="col">File Size</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">1</th>
+            <td>Blowfish</td>
+            <td>15kb</td>
+            <td>
+              <button type="submit" class="btn btn-outline-danger">
+                Decrypt
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="container">
@@ -85,6 +135,30 @@
           </button>
         </div>
       </form>
+
+      <table class="table caption-top mb-5">
+        <caption>Uploaded Encrypted Files (Twofish)</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">File Name</th>
+            <th scope="col">File Size</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">1</th>
+            <td>Twofish</td>
+            <td>15kb</td>
+            <td>
+              <button type="submit" class="btn btn-outline-danger">
+                Decrypt
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <script
@@ -93,7 +167,180 @@
       crossorigin="anonymous"
     ></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
+
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-analytics.js";
+      import { getDatabase, ref as ref_database, set, update, query, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+      import { getFirestore, collection, getDocs, addDoc, doc, setDoc, updateDoc} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+      import { getStorage, ref as ref_storage, getDownloadURL, uploadBytesResumable, getMetadata} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-storage.js";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+    
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyB_fgH-gqRagjhIRoY6SUaKoxlgyzjPrIk",
+        authDomain: "file-manager-1169c.firebaseapp.com",
+        projectId: "file-manager-1169c",
+        storageBucket: "file-manager-1169c.appspot.com",
+        messagingSenderId: "627965509307",
+        appId: "1:627965509307:web:0e4d1eee0cdb5fce1cf39e",
+        measurementId: "G-50PEMH6L40"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const database = getDatabase(app);
+      // Initialize Cloud Storage and get a reference to the service
+      const storage = getStorage(app);
+
+      //////////// Firebase Storage //////////////////
+			var file = [];
+			document.getElementById("file").addEventListener("change", function(e) {
+				file = e.target.files;
+			});
+
+
+			document.getElementById("send").addEventListener("click", function(e) {
+        e.preventDefault();
+
+				//checks if files are selected
+				if (file.length != 0) {
+					//Loops through all the selected files
+					for (let i = 0; i < file.length; i++) {
+
+						const fileName = file[i].name;
+
+						const refFileName = fileName.replace(/\.[^/.]+$/, "");
+			
+						//create a storage reference
+						const storageRef = ref_storage(storage, `AES/${fileName}`);
+				
+						//upload file
+						const upload = uploadBytesResumable(storageRef, file[i]);
+				
+						//update progress bar
+						upload.on(
+							"state_changed",
+							function progress(snapshot) {
+								var percentage = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+								//console.log('Upload is ' + percentage + '% done');
+								if (percentage === 100) {
+									swal("Uploaded!", "File uploaded!", "success");
+								} 
+								else {
+									swal("Uploading!", "File uploading, Don't close window!", "error");
+								}
+							},
+							function error() {
+								swal("Error!", "File not uploaded!", "error");
+							},
+							() => {
+								// complete function ....
+								getDownloadURL(upload.snapshot.ref).then((downloadURL) => {
+									let url = downloadURL;
+
+									console.log(url, refFileName);
+
+                  const fileRef = upload.snapshot.ref;
+
+                  // Get the file metadata
+                  getMetadata(upload.snapshot.ref).then(metadata => {
+                    // The file size is available in the metadata
+                    const fileSizeInBytes = metadata.size;
+                    const fileSizeInKB = fileSizeInBytes / 1024;
+
+                    function writeUserData(url, fileName, file) {
+                      const db = getDatabase();
+
+                      set(ref_database(db, 'AES/' + fileName), {
+                        name: fileName,
+                        file: url,
+                        size: fileSizeInKB,
+                      }).then(() => {
+                        // Data saved successfully!
+                        // window.location = "";
+                        swal("Uploaded!", "File uploaded!", "success");
+                      })
+                      .catch((error) => {
+                        // The write failed...
+                      });
+                    }
+
+                    writeUserData(url, refFileName);
+                  }).catch(error => {
+                    console.error('Error getting file metadata:', error);
+                  });
+								})
+							}
+						);
+					}
+				} 
+				else {
+					swal("No file!", "No file chosen!", "warning");
+				}
+			});
+      
+      let stdNo = 0;
+			let tbody = document.getElementById('tbody1');
+
+			let addItemToTable = (filename, url, size) => {
+				let tr = document.createElement('tr');
+
+				let th = document.createElement('th');
+				let td1 = document.createElement('td');
+				let td2 = document.createElement('td');
+				let td3 = document.createElement('td');
+
+				th.innerHTML = ++stdNo;
+				td1.innerHTML = `<a href="${url} target="_blank">${filename}</a>`;
+				td2.innerHTML = `${size}KB`;
+				td3.innerHTML = `<button type="submit" class="btn btn-outline-danger">Decrypt</button>`;
+								
+
+				tr.appendChild(th);
+				tr.appendChild(td1);
+				tr.appendChild(td2);
+				tr.appendChild(td3);
+
+				tbody.appendChild(tr);
+			}
+
+			let addAllItemsToTable = (user) => {
+				user.reverse();
+				stdNo = 0;
+				tbody.innerHTML = "";
+				user.forEach(element => {
+					addItemToTable(element.name, element.file, element.size);
+				});
+			}
+
+			function getAllDataAtOnce() {
+				const q = query (ref_database(database, "AES"));
+
+				get(q)
+				.then((snapshot) => {
+					var files = [];
+
+					snapshot.forEach(childSnapshot => {
+						files.push(childSnapshot.val());
+					});
+
+					addAllItemsToTable(files);
+				});
+			}
+
+			window.onload = getAllDataAtOnce;
+
+      
+    </script>
+
+    <!-- <script>
       function encryptFileAES() {
         var fileInput = document.getElementById("fileUpload-AES");
         var file = fileInput.files[0];
@@ -171,6 +418,6 @@
         };
         reader.readAsDataURL(file);
       }
-    </script>
+    </script> -->
   </body>
 </html>

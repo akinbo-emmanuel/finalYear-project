@@ -1,0 +1,6 @@
+a{
+    text-decoration: none; /* Remove underline */
+    color: inherit; /* Use the default text color */
+    background: none; /* Reset background */
+    font: inherit; /* Use the default font */
+}
